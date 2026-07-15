@@ -154,7 +154,7 @@
     <div class="header-container">
         <img src="ug4.png" class="header-icon" alt="石頭">
         <h1>愚公移山</h1>
-        <img src="ug1.jpg" class="header-icon" alt="愚公">
+        <img src="ug1.png" class="header-icon" alt="愚公">
     </div>
     
     <div id="topControls">
@@ -182,7 +182,7 @@
             <div class="stage" id="stage-1">
                 <img id="floating-stone-1" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-1" onclick="simulateCycle(1)">
-                    <img id="char-img-1" class="char-img" src="ug1.jpg" alt="愚公">
+                    <img id="char-img-1" class="char-img" src="ug1.png" alt="愚公">
                     <div class="char-name">愚公</div>
                 </div>
             </div>
@@ -200,7 +200,7 @@
             <div class="stage" id="stage-2">
                 <img id="floating-stone-2" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-2" onclick="simulateCycle(2)">
-                    <img id="char-img-2" class="char-img" src="ug1.jpg" alt="愚公">
+                    <img id="char-img-2" class="char-img" src="ug1.png" alt="愚公">
                     <div class="char-name">愚公</div>
                 </div>
             </div>
@@ -218,7 +218,7 @@
             <div class="stage" id="stage-3">
                 <img id="floating-stone-3" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-3" onclick="simulateCycle(3)">
-                    <img id="char-img-3" class="char-img" src="ug1.jpg" alt="愚公">
+                    <img id="char-img-3" class="char-img" src="ug1.png" alt="愚公">
                     <div class="char-name">愚公</div>
                 </div>
             </div>
@@ -236,7 +236,7 @@
             <div class="stage" id="stage-4">
                 <img id="floating-stone-4" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-4" onclick="simulateCycle(4)">
-                    <img id="char-img-4" class="char-img" src="ug1.jpg" alt="愚公">
+                    <img id="char-img-4" class="char-img" src="ug1.png" alt="愚公">
                     <div class="char-name">愚公</div>
                 </div>
             </div>
@@ -411,14 +411,14 @@
                 // 等待 0.4 秒後，籃子裡出現石頭
                 setTimeout(() => {
                     if (p.step === 1) { // 確保沒有被提早按B中斷
-                        charImg.src = "eg3.jpg"; 
+                        charImg.src = "ug3.png"; 
                     }
                 }, 400); 
             } 
             // 動作二：按 B 起立得分
             else if (action === 'B' && p.step === 1) {
                 p.step = 2; // 進入動畫保護鎖定狀態
-                charImg.src = "ug1.jpg"; // 主角回到站立姿勢
+                charImg.src = "ug1.png"; // 主角回到站立姿勢
                 
                 // 觸發石頭飛升淡出動畫
                 floatingStone.classList.remove('fade-up');
@@ -496,7 +496,7 @@
                 document.getElementById(`trophy-${i}`).innerHTML = '';
                 
                 const charImg = document.getElementById(`char-img-${i}`);
-                if (charImg) charImg.src = "ug1.jpg";
+                if (charImg) charImg.src = "ug1.png";
                 
                 const yugongWrap = document.getElementById(`yugong-wrap-${i}`);
                 if (yugongWrap) yugongWrap.classList.remove('win-spin');
