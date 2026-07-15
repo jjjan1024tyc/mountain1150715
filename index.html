@@ -65,7 +65,8 @@
             background: linear-gradient(to bottom, #bbdefb 0%, #bbdefb 60%, #aed581 60%, #8bc34a 100%);
             border-radius: 10px;
             margin-bottom: 10px;
-            overflow: hidden; 
+            /* 移除 overflow: hidden; 改為 visible，允許內容超出邊框（如勝利放大旋轉時不被切斷） */
+            overflow: visible; 
             border: 2px solid #9ccc65;
         }
 
@@ -73,14 +74,15 @@
         .mountain {
             position: absolute;
             bottom: 15%; /* 放置在畫面底部兩側 */
-            width: 25%;
+            /* 適度加寬兩側山脈容器，給放大的石頭足夠空間 */
+            width: 32%;
             display: flex;
             flex-direction: column;
             align-items: center;
             z-index: 1;
         }
-        .left-mountain { left: 5%; }
-        .right-mountain { right: 5%; }
+        .left-mountain { left: 2%; }
+        .right-mountain { right: 2%; }
         
         .mountain-layer {
             display: flex;
@@ -94,12 +96,13 @@
         }
         
         .mountain-stone {
-            width: 32%;
+            /* 原本 width 是 32%，調大約 50%，改為 48% */
+            width: 48%;
             aspect-ratio: 1;
             object-fit: contain;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             filter: drop-shadow(2px 3px 2px rgba(0,0,0,0.4));
-            margin: 0 -2%; /* 石頭左右微幅交疊 */
+            margin: 0 -5%; /* 石頭左右微幅交疊加深 */
         }
 
         /* 石頭顯示與隱藏特效 */
@@ -167,6 +170,7 @@
         .fade-up { animation: floatUpFade 0.8s ease-out forwards; }
         
         .win-spin {
+            /* 稍微調整放大的比例，避免擋住太多其他玩家介面 */
             animation: spinWin 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
             z-index: 100 !important;
         }
@@ -180,6 +184,7 @@
         
         @keyframes spinWin { 
             0% { transform: translateX(-50%) scale(1) rotate(0deg); } 
+            /* 獲勝放大 1.5 倍，因為移除了 hidden，現在可以完整顯示 */
             100% { transform: translateX(-50%) scale(1.5) rotate(360deg); filter: drop-shadow(0 0 15px #ffeb3b); } 
         }
 
