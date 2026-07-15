@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>愚公移山</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; text-align: center; background-color: #f1f8e9; margin: 0; padding: 10px; display: flex; flex-direction: column; min-height: 98vh; overflow-x: hidden; }
+        
+        /* 標題區域設計 */
+        .header-container { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 10px 0 20px 0; }
+        h1 { color: #33691e; margin: 0; font-size: 80px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+        .header-icon { height: 80px; object-fit: contain; }
+
+        /* 頂部控制區與人數選擇 */
+        #topControls { background-color: #c8e6c9; padding: 10px 20px; border-radius: 10px; margin-bottom: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; border: 2px solid #81c784; }
+        .control-label { font-weight: bold; color: #1b5e20; font-size: 18px; }
+        
+        .mode-btn { background-color: #009688; color: white; padding: 10px 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .mode-btn:hover { background-color: #00796b; transform: translateY(-2px); }
+        .mode-btn.active { background-color: #ff9800; cursor: default; transform: translateY(2px); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+        
+        #restartBtn { background-color: #5d4037; color: white; padding: 10px 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-left: 20px; }
+        #restartBtn:hover { background-color: #4e342e; }
+
+        /* 對戰主要容器 */
+        #battlefield { display: none; justify-content: center; gap: 15px; flex: 1; padding: 0 10px; flex-wrap: wrap; align-items: flex-start; }
+
+        /* 針對不同人數的寬度分配 */
+        .players-1 .player-zone { max-width: 800px; width: 100%; }
+        .players-2 .player-zone { max-width: 48%; width: 100%; }
+        .players-3 .player-zone { max-width: 32%; width: 100%; }
+        .players-4 .player-zone { max-width: 24%; min-width: 240px; width: 100%; }
+
+        /* 單一玩家的區域 */
+        .player-zone { 
+            flex: 1; 
+            background-color: #dcedc8; 
+            border: 4px solid #689f38; 
+            border-radius: 15px; 
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            box-sizing: border-box;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .player-title { font-size: 22px; font-weight: bold; color: #33691e; margin-bottom: 5px; }
+        
+        /* 連線按鈕區域 */
+        .connect-area { margin-bottom: 10px; }
+        .btn-connect { background-color: #ffb300; padding: 6px 12px; font-size: 15px; font-weight: bold; color: #3e2723; border: none; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
+        .btn-connect:hover { background-color: #ffa000; }
+        .btn-connect:disabled { background-color: #bdbdbd; cursor: not-allowed; color: white; }
+        .status-text { display: block; font-size: 13px; margin-top: 4px; color: #d32f2f; font-weight: bold; }
+
+        /* 遊戲舞台 */
+        .stage { 
+            width: 100%; 
+            aspect-ratio: 4 / 3; 
+            position: relative; 
+            background: linear-gradient(to bottom, #bbdefb 0%, #bbdefb 60%, #aed581 60%, #8bc34a 100%);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            overflow: hidden; 
+            border: 2px solid #9ccc65;
+        }
+
+        /* 角色基礎容器 */
+        .char-container { 
+            position: absolute; 
+            bottom: 5px; 
+            left: 50%;
+            transform: translateX(-50%);
+            height: 90%;
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            cursor: pointer;
+            z-index: 2;
+        }
+        
+        /* 圖片設定 */
+        .char-img { 
+            height: 100%; 
+            width: auto;
+            object-fit: contain; 
+            transition: all 0.2s ease;
+        }
+
+        /* 名字標籤 */
+        .char-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(51, 105, 30, 0.7);
+            padding: 2px 10px;
+            border-radius: 10px;
+            margin-top: 5px;
+            white-space: nowrap;
+        }
+
+        /* 石頭飛出淡出動畫的圖片 */
+        .floating-stone {
+            position: absolute;
+            height: 25%;
+            bottom: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .score-board { font-size: 18px; font-weight: bold; color: #3e2723; margin: 5px 0; }
+        .trophy-case { 
+            width: 100%; min-height: 60px; background-color: #fff; border: 2px dashed #8bc34a; 
+            border-radius: 10px; padding: 5px; display: flex; flex-wrap: wrap; gap: 5px; 
+            justify-content: center; align-items: center; align-content: flex-start;
+            box-sizing: border-box;
+        }
+        .mini-stone { height: 35px; object-fit: contain; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* 動畫套用 */
+        .fade-up { animation: floatUpFade 0.8s ease-out forwards; }
+        
+        .win-spin {
+            animation: spinWin 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
+            z-index: 100 !important;
+        }
+
+        @keyframes floatUpFade { 
+            0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); } 
+            100% { opacity: 0; transform: translate(-50%, -120px) scale(1.2); } 
+        }
+        
+        @keyframes popIn { 0% { transform: scale(0) rotate(-180deg); } 80% { transform: scale(1.2) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } }
+        
+        @keyframes spinWin { 
+            0% { transform: translateX(-50%) scale(1) rotate(0deg); } 
+            100% { transform: translateX(-50%) scale(1.5) rotate(360deg); filter: drop-shadow(0 0 15px #ffeb3b); } 
+        }
+
+        footer { margin-top: 20px; padding: 5px; font-size: 12px; color: #558b2f; border-top: 1px solid #c8e6c9;}
+        .time-info { margin-top: 5px; font-size: 12px; color: #558b2f; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <img src="ug4.png" class="header-icon" alt="石頭">
+        <h1>愚公移山</h1>
+        <img src="ug1.jpg" class="header-icon" alt="愚公">
+    </div>
+    
+    <div id="topControls">
+        <span class="control-label">選擇遊戲人數：</span>
+        <button class="mode-btn" id="mode-1" onclick="setPlayerCount(1)">1人</button>
+        <button class="mode-btn" id="mode-2" onclick="setPlayerCount(2)">2人</button>
+        <button class="mode-btn" id="mode-3" onclick="setPlayerCount(3)">3人</button>
+        <button class="mode-btn" id="mode-4" onclick="setPlayerCount(4)">4人</button>
+        <button id="restartBtn" onclick="resetAll()">🔄 重新開始</button>
+    </div>
+
+    <div style="display:none;">
+        <audio id="snd-score" src="https://assets.mixkit.co/active_storage/sfx/2052/2052-preview.mp3" preload="auto"></audio>
+        <audio id="snd-cheer" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" preload="auto"></audio>
+    </div>
+
+    <div id="battlefield">
+        <!-- 玩家 1 -->
+        <div class="player-zone" id="zone-1">
+            <div class="player-title">🟢 玩家 1</div>
+            <div class="connect-area">
+                <button class="btn-connect" id="btn-conn-1" onclick="connectDevice(1)">連線 1 號體感器</button>
+                <span class="status-text" id="status-1">未連線</span>
+            </div>
+            <div class="stage" id="stage-1">
+                <img id="floating-stone-1" class="floating-stone" src="ug4.png">
+                <div class="char-container" id="yugong-wrap-1" onclick="simulateCycle(1)">
+                    <img id="char-img-1" class="char-img" src="ug1.jpg" alt="愚公">
+                    <div class="char-name">愚公</div>
+                </div>
+            </div>
+            <div class="score-board">搬運量：<span id="score-1">0</span> / 10</div>
+            <div class="trophy-case" id="trophy-1"></div>
+        </div>
+
+        <!-- 玩家 2 -->
+        <div class="player-zone" id="zone-2">
+            <div class="player-title">🟡 玩家 2</div>
+            <div class="connect-area">
+                <button class="btn-connect" id="btn-conn-2" onclick="connectDevice(2)">連線 2 號體感器</button>
+                <span class="status-text" id="status-2">未連線</span>
+            </div>
+            <div class="stage" id="stage-2">
+                <img id="floating-stone-2" class="floating-stone" src="ug4.png">
+                <div class="char-container" id="yugong-wrap-2" onclick="simulateCycle(2)">
+                    <img id="char-img-2" class="char-img" src="ug1.jpg" alt="愚公">
+                    <div class="char-name">愚公</div>
+                </div>
+            </div>
+            <div class="score-board">搬運量：<span id="score-2">0</span> / 10</div>
+            <div class="trophy-case" id="trophy-2"></div>
+        </div>
+
+        <!-- 玩家 3 -->
+        <div class="player-zone" id="zone-3">
+            <div class="player-title">🔴 玩家 3</div>
+            <div class="connect-area">
+                <button class="btn-connect" id="btn-conn-3" onclick="connectDevice(3)">連線 3 號體感器</button>
+                <span class="status-text" id="status-3">未連線</span>
+            </div>
+            <div class="stage" id="stage-3">
+                <img id="floating-stone-3" class="floating-stone" src="ug4.png">
+                <div class="char-container" id="yugong-wrap-3" onclick="simulateCycle(3)">
+                    <img id="char-img-3" class="char-img" src="ug1.jpg" alt="愚公">
+                    <div class="char-name">愚公</div>
+                </div>
+            </div>
+            <div class="score-board">搬運量：<span id="score-3">0</span> / 10</div>
+            <div class="trophy-case" id="trophy-3"></div>
+        </div>
+
+        <!-- 玩家 4 -->
+        <div class="player-zone" id="zone-4">
+            <div class="player-title">🔵 玩家 4</div>
+            <div class="connect-area">
+                <button class="btn-connect" id="btn-conn-4" onclick="connectDevice(4)">連線 4 號體感器</button>
+                <span class="status-text" id="status-4">未連線</span>
+            </div>
+            <div class="stage" id="stage-4">
+                <img id="floating-stone-4" class="floating-stone" src="ug4.png">
+                <div class="char-container" id="yugong-wrap-4" onclick="simulateCycle(4)">
+                    <img id="char-img-4" class="char-img" src="ug1.jpg" alt="愚公">
+                    <div class="char-name">愚公</div>
+                </div>
+            </div>
+            <div class="score-board">搬運量：<span id="score-4">0</span> / 10</div>
+            <div class="trophy-case" id="trophy-4"></div>
+        </div>
+    </div>
+
+    <footer>Taoyuan City Jianguo Junior High School Teacher Chan Chih Chieh (2026) | 改編：愚公移山體感版</footer>
+    <div id="timeDisplay" class="time-info"></div>
+
+    <script>
+        const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+        const TX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+
+        const maxScore = 10;
+        let gameEnded = false;
+        let audioUnlocked = false;
+        let currentPlayers = 0; 
+
+        // step: 0 (站立空手), 1 (蹲下準備裝石/已裝石), 2 (起立得分動畫中)
+        const players = {
+            1: { score: 0, device: null, server: null, buffer: "", step: 0 },
+            2: { score: 0, device: null, server: null, buffer: "", step: 0 },
+            3: { score: 0, device: null, server: null, buffer: "", step: 0 },
+            4: { score: 0, device: null, server: null, buffer: "", step: 0 }
+        };
+
+        window.onload = () => {
+            updateGeneratedTime();
+        };
+
+        function updateGeneratedTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const date = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('timeDisplay').innerText = `最後修改：${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function setPlayerCount(num, doUnlock = true) {
+            currentPlayers = num;
+            if(doUnlock) unlockAudio();
+
+            const battlefield = document.getElementById('battlefield');
+            battlefield.style.display = 'flex';
+            battlefield.className = `players-${num}`;
+
+            for(let i=1; i<=4; i++) {
+                const btn = document.getElementById(`mode-${i}`);
+                if(i === num) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+                
+                const zone = document.getElementById(`zone-${i}`);
+                if(i <= num) {
+                    zone.style.display = 'flex';
+                } else {
+                    zone.style.display = 'none';
+                }
+            }
+            resetAll(); 
+        }
+
+        function unlockAudio() {
+            if(audioUnlocked) return;
+            const snd = document.getElementById('snd-score');
+            snd.volume = 0;
+            snd.play().then(() => { snd.pause(); snd.currentTime = 0; snd.volume = 1.0; }).catch(e => {});
+            
+            const cheer = document.getElementById('snd-cheer');
+            cheer.volume = 0;
+            cheer.play().then(() => { cheer.pause(); cheer.currentTime = 0; cheer.volume = 1.0; }).catch(e => {});
+            audioUnlocked = true;
+        }
+
+        async function connectDevice(playerId) {
+            const btn = document.getElementById(`btn-conn-${playerId}`);
+            const status = document.getElementById(`status-${playerId}`);
+            try {
+                status.innerText = "搜尋裝置中..."; status.style.color = "#ff9800";
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'BBC micro:bit' }],
+                    optionalServices: [UART_SERVICE_UUID]
+                });
+                players[playerId].device = device;
+                device.addEventListener('gattserverdisconnected', () => handleDisconnect(playerId));
+
+                status.innerText = "連線中...";
+                const server = await device.gatt.connect();
+                players[playerId].server = server;
+                
+                const service = await server.getPrimaryService(UART_SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+                
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', (e) => handleData(e, playerId));
+                
+                btn.innerText = "🟢 已連線";
+                btn.disabled = true;
+                status.innerText = "連線穩定";
+                status.style.color = "green";
+            } catch (error) {
+                console.error(`玩家 ${playerId} 連線失敗`, error);
+                status.innerText = "連線失敗";
+                status.style.color = "red";
+            }
+        }
+
+        function handleDisconnect(playerId) {
+            const btn = document.getElementById(`btn-conn-${playerId}`);
+            const status = document.getElementById(`status-${playerId}`);
+            btn.innerText = `連線 ${playerId} 號體感器`;
+            btn.disabled = false;
+            status.innerText = "已斷線";
+            status.style.color = "red";
+            players[playerId].device = null;
+            players[playerId].server = null;
+        }
+
+        function handleData(event, playerId) {
+            if (gameEnded || playerId > currentPlayers) return;
+            const value = event.target.value;
+            const decoder = new TextDecoder('utf-8');
+            players[playerId].buffer += decoder.decode(value);
+
+            if (players[playerId].buffer.includes('\n')) {
+                const lines = players[playerId].buffer.split('\n');
+                const latestData = lines[lines.length - 2].trim().toUpperCase();
+                players[playerId].buffer = lines[lines.length - 1];
+
+                if (latestData === "A") {
+                    executeAction(playerId, 'A');
+                } else if (latestData === "B") {
+                    executeAction(playerId, 'B');
+                } else if (latestData === "HIT") {
+                    // 若收到舊版的打擊訊號，自動輪替動作(相容模式)
+                    simulateCycle(playerId);
+                }
+            }
+        }
+
+        // 電腦滑鼠點擊圖片時測試使用：自動輪流觸發 A 和 B
+        function simulateCycle(playerId) {
+            if(gameEnded || playerId > currentPlayers) return;
+            const p = players[playerId];
+            if(p.step === 0) {
+                executeAction(playerId, 'A');
+            } else if (p.step === 1) {
+                executeAction(playerId, 'B');
+            }
+        }
+
+        function executeAction(playerId, action) {
+            const p = players[playerId];
+            if (gameEnded) return;
+
+            const charImg = document.getElementById(`char-img-${playerId}`);
+            const floatingStone = document.getElementById(`floating-stone-${playerId}`);
+
+            // 動作一：按 A 蹲下裝石
+            if (action === 'A' && p.step === 0) {
+                p.step = 1;
+                charImg.src = "ug2.png"; // 蹲下空籃子
+                
+                // 等待 0.4 秒後，籃子裡出現石頭
+                setTimeout(() => {
+                    if (p.step === 1) { // 確保沒有被提早按B中斷
+                        charImg.src = "eg3.jpg"; 
+                    }
+                }, 400); 
+            } 
+            // 動作二：按 B 起立得分
+            else if (action === 'B' && p.step === 1) {
+                p.step = 2; // 進入動畫保護鎖定狀態
+                charImg.src = "ug1.jpg"; // 主角回到站立姿勢
+                
+                // 觸發石頭飛升淡出動畫
+                floatingStone.classList.remove('fade-up');
+                void floatingStone.offsetWidth; // 重新觸發 DOM 重繪
+                floatingStone.classList.add('fade-up');
+
+                if(audioUnlocked) {
+                    const globalSnd = document.getElementById('snd-score');
+                    const clonedSnd = globalSnd.cloneNode(); 
+                    clonedSnd.volume = 1.0;
+                    clonedSnd.play().catch(e => console.log(e));
+                }
+
+                // 動畫演完後才算得分
+                setTimeout(() => {
+                    if(gameEnded && p.score >= maxScore) return; // 防呆
+                    
+                    p.score++;
+                    document.getElementById(`score-${playerId}`).innerText = p.score;
+                    
+                    // 在計分板增加一顆小石頭
+                    const trophy = document.createElement('img');
+                    trophy.src = 'ug4.png';
+                    trophy.className = 'mini-stone';
+                    document.getElementById(`trophy-${playerId}`).appendChild(trophy);
+                    
+                    if (p.score >= maxScore) {
+                        declareWinner(playerId);
+                    } else {
+                        p.step = 0; // 回復成準備狀態，等待下一次按 A
+                    }
+                }, 800); // 配合 CSS 動畫的時間 (0.8s)
+            }
+        }
+
+        function declareWinner(playerId) {
+            gameEnded = true;
+            if(audioUnlocked) {
+                const cheer = document.getElementById('snd-cheer');
+                cheer.currentTime = 0;
+                cheer.play().catch(e => console.log(e));
+            }
+
+            const yugongWrap = document.getElementById(`yugong-wrap-${playerId}`);
+            yugongWrap.classList.add('win-spin');
+            
+            var duration = 3000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            function randomInRange(min, max) {
+              return Math.random() * (max - min) + min;
+            }
+
+            var interval = setInterval(function() {
+              var timeLeft = animationEnd - Date.now();
+              if (timeLeft <= 0) return clearInterval(interval);
+
+              var particleCount = 50 * (timeLeft / duration);
+              // 改為噴灑綠色與褐色的碎紙花，符合愚公移山主題
+              confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#4caf50', '#795548', '#8bc34a'] }));
+              confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#4caf50', '#795548', '#8bc34a'] }));
+            }, 250);
+        }
+
+        function resetAll() {
+            gameEnded = false;
+            if (currentPlayers === 0) return;
+
+            for(let i=1; i<=4; i++) {
+                players[i].score = 0;
+                players[i].step = 0;
+                
+                document.getElementById(`score-${i}`).innerText = '0';
+                document.getElementById(`trophy-${i}`).innerHTML = '';
+                
+                const charImg = document.getElementById(`char-img-${i}`);
+                if (charImg) charImg.src = "ug1.jpg";
+                
+                const yugongWrap = document.getElementById(`yugong-wrap-${i}`);
+                if (yugongWrap) yugongWrap.classList.remove('win-spin');
+                
+                const floatingStone = document.getElementById(`floating-stone-${i}`);
+                if (floatingStone) floatingStone.classList.remove('fade-up');
+            }
+        }
+
+        // 新增鍵盤控制：預設使用鍵盤 A、B 鍵控制玩家 1
+        document.addEventListener('keydown', (event) => {
+            // 確保遊戲已經選擇人數開始，且尚未結束
+            if (currentPlayers >= 1 && !gameEnded) {
+                const key = event.key.toLowerCase();
+                if (key === 'a') {
+                    executeAction(1, 'A');
+                } else if (key === 'b') {
+                    executeAction(1, 'B');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
