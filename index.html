@@ -69,6 +69,44 @@
             border: 2px solid #9ccc65;
         }
 
+        /* ----- 山脈與石頭圖層設計 ----- */
+        .mountain {
+            position: absolute;
+            bottom: 15%; /* 放置在畫面底部兩側 */
+            width: 25%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+        .left-mountain { left: 5%; }
+        .right-mountain { right: 5%; }
+        
+        .mountain-layer {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+        }
+        /* 讓下一層石頭往上疊加，製造立體金字塔感 */
+        .mountain-layer + .mountain-layer {
+            margin-top: -20%; 
+        }
+        
+        .mountain-stone {
+            width: 32%;
+            aspect-ratio: 1;
+            object-fit: contain;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(2px 3px 2px rgba(0,0,0,0.4));
+            margin: 0 -2%; /* 石頭左右微幅交疊 */
+        }
+
+        /* 石頭顯示與隱藏特效 */
+        .stone-hide { opacity: 0; transform: translateY(-10px) scale(0.5); }
+        .stone-show { opacity: 1; transform: translateY(0) scale(1); }
+        /* ---------------------------- */
+
         /* 角色基礎容器 */
         .char-container { 
             position: absolute; 
@@ -180,6 +218,10 @@
                 <span class="status-text" id="status-1">未連線</span>
             </div>
             <div class="stage" id="stage-1">
+                <!-- 左側山脈與右側山脈容器 -->
+                <div class="mountain left-mountain" id="left-mountain-1"></div>
+                <div class="mountain right-mountain" id="right-mountain-1"></div>
+                
                 <img id="floating-stone-1" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-1" onclick="simulateCycle(1)">
                     <img id="char-img-1" class="char-img" src="ug1.png" alt="愚公">
@@ -198,6 +240,9 @@
                 <span class="status-text" id="status-2">未連線</span>
             </div>
             <div class="stage" id="stage-2">
+                <div class="mountain left-mountain" id="left-mountain-2"></div>
+                <div class="mountain right-mountain" id="right-mountain-2"></div>
+
                 <img id="floating-stone-2" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-2" onclick="simulateCycle(2)">
                     <img id="char-img-2" class="char-img" src="ug1.png" alt="愚公">
@@ -216,6 +261,9 @@
                 <span class="status-text" id="status-3">未連線</span>
             </div>
             <div class="stage" id="stage-3">
+                <div class="mountain left-mountain" id="left-mountain-3"></div>
+                <div class="mountain right-mountain" id="right-mountain-3"></div>
+
                 <img id="floating-stone-3" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-3" onclick="simulateCycle(3)">
                     <img id="char-img-3" class="char-img" src="ug1.png" alt="愚公">
@@ -234,6 +282,9 @@
                 <span class="status-text" id="status-4">未連線</span>
             </div>
             <div class="stage" id="stage-4">
+                <div class="mountain left-mountain" id="left-mountain-4"></div>
+                <div class="mountain right-mountain" id="right-mountain-4"></div>
+
                 <img id="floating-stone-4" class="floating-stone" src="ug4.png">
                 <div class="char-container" id="yugong-wrap-4" onclick="simulateCycle(4)">
                     <img id="char-img-4" class="char-img" src="ug1.png" alt="愚公">
@@ -257,13 +308,21 @@
         let audioUnlocked = false;
         let currentPlayers = 0; 
 
-        // step: 0 (站立空手), 1 (蹲下準備裝石/已裝石), 2 (起立得分動畫中)
+        // 狀態機: step 0 (站立空手), 1 (蹲下準備裝石), isAnimating 防止快速亂按破壞動畫流程
         const players = {
-            1: { score: 0, device: null, server: null, buffer: "", step: 0 },
-            2: { score: 0, device: null, server: null, buffer: "", step: 0 },
-            3: { score: 0, device: null, server: null, buffer: "", step: 0 },
-            4: { score: 0, device: null, server: null, buffer: "", step: 0 }
+            1: { score: 0, device: null, server: null, buffer: "", step: 0, isAnimating: false },
+            2: { score: 0, device: null, server: null, buffer: "", step: 0, isAnimating: false },
+            3: { score: 0, device: null, server: null, buffer: "", step: 0, isAnimating: false },
+            4: { score: 0, device: null, server: null, buffer: "", step: 0, isAnimating: false }
         };
+
+        // 建立右邊空地石頭堆疊順序對照表 (由下而上、由左而右)
+        // 索引 0-9 對應原本左邊由上而下的金字塔結構
+        // 第4層(底層): 6, 7, 8, 9
+        // 第3層: 3, 4, 5
+        // 第2層: 1, 2
+        // 第1層(頂層): 0
+        const rightMountainSequence = [6, 7, 8, 9, 3, 4, 5, 1, 2, 0];
 
         window.onload = () => {
             updateGeneratedTime();
@@ -279,6 +338,37 @@
             const seconds = String(now.getSeconds()).padStart(2, '0');
             
             document.getElementById('timeDisplay').innerText = `最後修改：${year}-${month}-${date} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 動態生成金字塔石頭 HTML (左右各10顆)
+        function generateMountains(playerId) {
+            const leftContainer = document.getElementById(`left-mountain-${playerId}`);
+            const rightContainer = document.getElementById(`right-mountain-${playerId}`);
+            if (!leftContainer || !rightContainer) return;
+
+            let leftHtml = '';
+            let rightHtml = '';
+            let stoneId = 0;
+
+            // 4層: 1顆, 2顆, 3顆, 4顆
+            for(let layer = 1; layer <= 4; layer++) {
+                // z-index: 上層必須蓋在下層的上面，所以第一層(layer=1) z-index 需最大
+                leftHtml += `<div class="mountain-layer" style="z-index: ${5 - layer};">`;
+                rightHtml += `<div class="mountain-layer" style="z-index: ${5 - layer};">`;
+                
+                for(let i = 0; i < layer; i++) {
+                    // 左邊預設全部顯示 (stone-show)，右邊預設全部隱藏 (stone-hide)
+                    leftHtml += `<img id="lm-p${playerId}-s${stoneId}" class="mountain-stone stone-show" src="ug4.png">`;
+                    rightHtml += `<img id="rm-p${playerId}-s${stoneId}" class="mountain-stone stone-hide" src="ug4.png">`;
+                    stoneId++;
+                }
+                
+                leftHtml += `</div>`;
+                rightHtml += `</div>`;
+            }
+
+            leftContainer.innerHTML = leftHtml;
+            rightContainer.innerHTML = rightHtml;
         }
 
         function setPlayerCount(num, doUnlock = true) {
@@ -379,48 +469,56 @@
                 } else if (latestData === "B") {
                     executeAction(playerId, 'B');
                 } else if (latestData === "HIT") {
-                    // 若收到舊版的打擊訊號，自動輪替動作(相容模式)
+                    // 相容模式
                     simulateCycle(playerId);
                 }
             }
         }
 
-        // 電腦滑鼠點擊圖片時測試使用：自動輪流觸發 A 和 B
         function simulateCycle(playerId) {
             if(gameEnded || playerId > currentPlayers) return;
             const p = players[playerId];
-            if(p.step === 0) {
+            if(p.step === 0 && !p.isAnimating) {
                 executeAction(playerId, 'A');
-            } else if (p.step === 1) {
+            } else if (p.step === 1 && !p.isAnimating) {
                 executeAction(playerId, 'B');
             }
         }
 
         function executeAction(playerId, action) {
             const p = players[playerId];
-            if (gameEnded) return;
+            // 若遊戲已結束或是動畫正在播放中，則不接受新的指令
+            if (gameEnded || p.isAnimating) return;
 
             const charImg = document.getElementById(`char-img-${playerId}`);
             const floatingStone = document.getElementById(`floating-stone-${playerId}`);
 
             // 動作一：按 A 蹲下裝石
-            if (action === 'A' && p.step === 0) {
-                p.step = 1;
+            if (action === 'A' && p.step === 0 && p.score < maxScore) {
+                p.isAnimating = true;
                 charImg.src = "ug2.png"; // 蹲下空籃子
                 
-                // 等待 0.4 秒後，籃子裡出現石頭
+                // 1. 讓左側山脈的特定石頭淡出消失
+                const currentLeftIndex = p.score; 
+                const targetLeftStone = document.getElementById(`lm-p${playerId}-s${currentLeftIndex}`);
+                if (targetLeftStone) {
+                    targetLeftStone.classList.remove('stone-show');
+                    targetLeftStone.classList.add('stone-hide');
+                }
+
+                // 2. 延遲 0.4 秒後，石頭出現在愚公籃子內
                 setTimeout(() => {
-                    if (p.step === 1) { // 確保沒有被提早按B中斷
-                        charImg.src = "ug3.png"; 
-                    }
+                    charImg.src = "ug3.png"; 
+                    p.step = 1; // 允許進行下一步
+                    p.isAnimating = false; // 解除鎖定
                 }, 400); 
             } 
             // 動作二：按 B 起立得分
             else if (action === 'B' && p.step === 1) {
-                p.step = 2; // 進入動畫保護鎖定狀態
-                charImg.src = "ug1.png"; // 主角回到站立姿勢
+                p.isAnimating = true;
+                charImg.src = "ug1.png"; // 主角回到站立空籃子
                 
-                // 觸發石頭飛升淡出動畫
+                // 1. 觸發籃子內石頭向上飛升並淡出動畫
                 floatingStone.classList.remove('fade-up');
                 void floatingStone.offsetWidth; // 重新觸發 DOM 重繪
                 floatingStone.classList.add('fade-up');
@@ -432,14 +530,22 @@
                     clonedSnd.play().catch(e => console.log(e));
                 }
 
-                // 動畫演完後才算得分
+                // 2. 動畫演完後，右側山地浮現石頭，並計分
                 setTimeout(() => {
                     if(gameEnded && p.score >= maxScore) return; // 防呆
                     
+                    // 讓右側山脈的特定石頭淡入出現
+                    const currentRightIndex = rightMountainSequence[p.score];
+                    const targetRightStone = document.getElementById(`rm-p${playerId}-s${currentRightIndex}`);
+                    if (targetRightStone) {
+                        targetRightStone.classList.remove('stone-hide');
+                        targetRightStone.classList.add('stone-show');
+                    }
+
                     p.score++;
                     document.getElementById(`score-${playerId}`).innerText = p.score;
                     
-                    // 在計分板增加一顆小石頭
+                    // 額外保留原本的計分區小石頭
                     const trophy = document.createElement('img');
                     trophy.src = 'ug4.png';
                     trophy.className = 'mini-stone';
@@ -448,9 +554,10 @@
                     if (p.score >= maxScore) {
                         declareWinner(playerId);
                     } else {
-                        p.step = 0; // 回復成準備狀態，等待下一次按 A
+                        p.step = 0; // 回復準備狀態
+                        p.isAnimating = false; // 解除鎖定
                     }
-                }, 800); // 配合 CSS 動畫的時間 (0.8s)
+                }, 800); 
             }
         }
 
@@ -478,7 +585,6 @@
               if (timeLeft <= 0) return clearInterval(interval);
 
               var particleCount = 50 * (timeLeft / duration);
-              // 改為噴灑綠色與褐色的碎紙花，符合愚公移山主題
               confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }, colors: ['#4caf50', '#795548', '#8bc34a'] }));
               confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }, colors: ['#4caf50', '#795548', '#8bc34a'] }));
             }, 250);
@@ -491,6 +597,7 @@
             for(let i=1; i<=4; i++) {
                 players[i].score = 0;
                 players[i].step = 0;
+                players[i].isAnimating = false;
                 
                 document.getElementById(`score-${i}`).innerText = '0';
                 document.getElementById(`trophy-${i}`).innerHTML = '';
@@ -503,12 +610,14 @@
                 
                 const floatingStone = document.getElementById(`floating-stone-${i}`);
                 if (floatingStone) floatingStone.classList.remove('fade-up');
+
+                // 動態重新生成/重置左右兩側的金字塔石頭
+                generateMountains(i);
             }
         }
 
-        // 新增鍵盤控制：預設使用鍵盤 A、B 鍵控制玩家 1
+        // 電腦鍵盤控制 (預設控制玩家 1)
         document.addEventListener('keydown', (event) => {
-            // 確保遊戲已經選擇人數開始，且尚未結束
             if (currentPlayers >= 1 && !gameEnded) {
                 const key = event.key.toLowerCase();
                 if (key === 'a') {
