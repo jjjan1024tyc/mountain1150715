@@ -36,8 +36,7 @@
         /* 單一玩家的區域 */
         .player-zone { 
             flex: 1; 
-            background-color: #dcedc8; 
-            border: 4px solid #689f38; 
+            border: 4px solid #ffffff; /* 改為白色邊框，百搭所有鮮豔底色 */
             border-radius: 15px; 
             padding: 10px;
             display: flex;
@@ -45,17 +44,26 @@
             align-items: center;
             position: relative;
             box-sizing: border-box;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
-        .player-title { font-size: 22px; font-weight: bold; color: #33691e; margin-bottom: 5px; }
+        /* 依照玩家分配不同的底色 (1~4號) */
+        #zone-1 { background-color: #DC143C; }
+        #zone-2 { background-color: #008080; }
+        #zone-3 { background-color: #0000CD; }
+        #zone-4 { background-color: #FFA500; }
+
+        .player-title { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
         
+        /* 針對深色底色，將標題文字改為白色並加上微陰影 */
+        #zone-1 .player-title, #zone-2 .player-title, #zone-3 .player-title, #zone-4 .player-title { color: #ffffff; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+
         /* 連線按鈕區域 */
         .connect-area { margin-bottom: 10px; }
         .btn-connect { background-color: #ffb300; padding: 6px 12px; font-size: 15px; font-weight: bold; color: #3e2723; border: none; border-radius: 8px; cursor: pointer; transition: background 0.3s; }
         .btn-connect:hover { background-color: #ffa000; }
         .btn-connect:disabled { background-color: #bdbdbd; cursor: not-allowed; color: white; }
-        .status-text { display: block; font-size: 13px; margin-top: 4px; color: #d32f2f; font-weight: bold; }
+        .status-text { display: block; font-size: 13px; margin-top: 4px; color: #ffffff; font-weight: bold; }
 
         /* 遊戲舞台 */
         .stage { 
@@ -65,7 +73,7 @@
             background: linear-gradient(to bottom, #bbdefb 0%, #bbdefb 60%, #aed581 60%, #8bc34a 100%);
             border-radius: 10px;
             margin-bottom: 10px;
-            /* 移除 overflow: hidden; 改為 visible，允許內容超出邊框（如勝利放大旋轉時不被切斷） */
+            /* 移除 overflow: hidden; 改為 visible，允許內容超出邊框 */
             overflow: visible; 
             border: 2px solid #9ccc65;
         }
@@ -74,7 +82,6 @@
         .mountain {
             position: absolute;
             bottom: 15%; /* 放置在畫面底部兩側 */
-            /* 適度加寬兩側山脈容器，給放大的石頭足夠空間 */
             width: 32%;
             display: flex;
             flex-direction: column;
@@ -96,7 +103,7 @@
         }
         
         .mountain-stone {
-            /* 原本 width 是 48%，現在微調為 42% */
+            /* 寬度 42% */
             width: 42%;
             aspect-ratio: 1;
             object-fit: contain;
@@ -157,7 +164,12 @@
             pointer-events: none;
         }
 
-        .score-board { font-size: 18px; font-weight: bold; color: #3e2723; margin: 5px 0; }
+        .score-board { font-size: 18px; font-weight: bold; margin: 5px 0; }
+        
+        /* 計分板文字顏色調整 (搭配底色) */
+        #zone-1 .score-board, #zone-2 .score-board, #zone-3 .score-board { color: #ffffff; }
+        #zone-4 .score-board { color: #3e2723; } /* 橘色底配深色字 */
+
         .trophy-case { 
             width: 100%; min-height: 60px; background-color: #fff; border: 2px dashed #8bc34a; 
             border-radius: 10px; padding: 5px; display: flex; flex-wrap: wrap; gap: 5px; 
@@ -170,7 +182,6 @@
         .fade-up { animation: floatUpFade 0.8s ease-out forwards; }
         
         .win-spin {
-            /* 稍微調整放大的比例，避免擋住太多其他玩家介面 */
             animation: spinWin 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
             z-index: 100 !important;
         }
@@ -184,7 +195,7 @@
         
         @keyframes spinWin { 
             0% { transform: translateX(-50%) scale(1) rotate(0deg); } 
-            /* 獲勝放大 1.5 倍，因為移除了 hidden，現在可以完整顯示 */
+            /* 獲勝放大 1.5 倍 */
             100% { transform: translateX(-50%) scale(1.5) rotate(360deg); filter: drop-shadow(0 0 15px #ffeb3b); } 
         }
 
@@ -418,7 +429,7 @@
             const btn = document.getElementById(`btn-conn-${playerId}`);
             const status = document.getElementById(`status-${playerId}`);
             try {
-                status.innerText = "搜尋裝置中..."; status.style.color = "#ff9800";
+                status.innerText = "搜尋裝置中..."; status.style.color = "#ffeb3b";
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'BBC micro:bit' }],
                     optionalServices: [UART_SERVICE_UUID]
@@ -439,11 +450,11 @@
                 btn.innerText = "🟢 已連線";
                 btn.disabled = true;
                 status.innerText = "連線穩定";
-                status.style.color = "green";
+                status.style.color = "#b2ff59";
             } catch (error) {
                 console.error(`玩家 ${playerId} 連線失敗`, error);
                 status.innerText = "連線失敗";
-                status.style.color = "red";
+                status.style.color = "#ff5252";
             }
         }
 
@@ -453,7 +464,7 @@
             btn.innerText = `連線 ${playerId} 號體感器`;
             btn.disabled = false;
             status.innerText = "已斷線";
-            status.style.color = "red";
+            status.style.color = "#ff5252";
             players[playerId].device = null;
             players[playerId].server = null;
         }
